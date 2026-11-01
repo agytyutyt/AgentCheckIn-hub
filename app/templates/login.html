@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ app_name }}{% endblock %}
+
+{% block anon %}
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>{{ app_name }}</h1>
+    <p>多平台每日签到与积分领取控制台</p>
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    <form method="post" action="/login">
+      <label class="field">
+        <span>用户名</span>
+        <input class="input" name="username" autocomplete="username" autofocus>
+      </label>
+      <label class="field">
+        <span>口令</span>
+        <input class="input" type="password" name="password" autocomplete="current-password">
+      </label>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px;" type="submit">登录</button>
+    </form>
+    <p class="small faint" style="margin-top:18px;">
+      默认口令 <span class="mono">admin123</span>，可在 <span class="mono">.env</span> 的
+      <span class="mono">ADMIN_PASSWORD</span> 修改，登录后也能在「设置」页改。
+    </p>
+  </div>
+</div>
+{% endblock %}

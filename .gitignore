@@ -1,0 +1,21 @@
+.venv/
+data/
+.smoke/
+.demo/
+__pycache__/
+*.pyc
+.env
+*.db
+*.db-wal
+*.db-shm
+# 导出器产出的明文令牌，绝不能进包/进库
+wb.json
+qoder.json
+# 含面板地址/口令的本机脚本（tools/sync_qoder_identity.bat 会调它）
+*.local.bat
+.env.local
+# 部署包是构建产物，且默认打包时会带上 data/（含 master.key），不进 git
+deploy/checkin-hub.tar.gz
+# 面板截图必然带真实账号标识（手机号/UID/令牌片段），只留本地
+docs/screenshots/
+*.local.md

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}日志 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">实时日志</h1>
+    <div class="page-sub">服务端事件流（SSE），保留最近 90 天；默认只显示结果行，空跑与「开始执行」收进调试</div>
+  </div>
+  <div class="row">
+    <label class="small faint" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="show-debug" onchange="toggleLogDebug(this.checked)">
+      显示空跑/调试
+    </label>
+    <button class="btn" onclick="document.getElementById('logbox').scrollTop = 1e9;">滚到底部</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">事件流</h2>
+      <div class="card-sub">共 {{ logs|length }} 条 · 空跑/调试已折叠</div>
+    </div>
+    <span class="chip chip-info">实时</span>
+  </div>
+  <div class="logbox" id="logbox">
+    {% for l in logs %}
+    <div class="logline {{ l.level }}">
+      <span class="t">{{ l.ts | time_fmt }}</span>
+      <span class="l">{{ l.level }}</span>
+      <span class="m">{{ l.msg }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>initLogStream({{ last_id }});</script>
+{% endblock %}

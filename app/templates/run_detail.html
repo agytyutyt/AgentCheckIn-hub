@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}执行 #{{ run.id }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set labels = {'success':'成功','skipped':'已跳过','pending':'待下发','retryable':'待重试','failed':'失败','need_login':'需登录','running':'执行中'} %}
+{% set colors = {'success':'var(--ok)','skipped':'var(--skip)','failed':'var(--danger)','need_login':'var(--danger)','retryable':'var(--warn)','pending':'var(--warn)','running':'var(--warn)'} %}
+{% set stripe = colors.get(run.status, 'var(--border-strong)') %}
+{% set cr = run.delta_credit or run.credit_snapshot or 0 %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">执行 #{{ run.id }}</h1>
+    <div class="page-sub">{{ run.task_name }} · {{ run.account_name }} · {{ run.biz_date }}</div>
+  </div>
+  <a class="btn" href="/runs">返回列表</a>
+</div>
+
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric">
+    <div class="k">状态</div>
+    <div class="v" style="font-size:18px;color:{{ stripe }};">{{ labels.get(run.status, run.status) }}</div>
+  </div>
+  <div class="metric">
+    <div class="k">积分（本次 / 今日累计）</div>
+    <div class="v" style="font-size:18px;">{{ run.delta_credit }}<span class="u">/ {{ run.credit_snapshot or 0 }}</span></div>
+  </div>
+  <div class="metric">
+    <div class="k">耗时</div>
+    <div class="v" style="font-size:18px;">{{ run.duration_ms }}<span class="u">ms</span></div>
+  </div>
+  <div class="metric">
+    <div class="k">尝试次数 / 触发</div>
+    <div class="v" style="font-size:18px;">{{ run.attempt }}<span class="u">次 · {{ run.trigger }}</span></div>
+  </div>
+</div>
+
+<div class="card" style="border-left:3px solid {{ stripe }}; margin-bottom:16px;">
+  <div class="card-head" style="margin-bottom:8px;">
+    <h2 class="card-title">结果</h2>
+    <span class="small faint">开始 {{ run.started_at | datetime_fmt }} · 结束 {{ run.finished_at | datetime_fmt if run.finished_at else '—' }}</span>
+  </div>
+  <p style="margin:0;font-size:14px;">{{ run.message or '—' }}</p>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">执行日志</h2></div>
+    {% if logs %}
+    <div class="mono small" style="line-height:1.9;">
+      {% for l in logs %}
+      <div class="logline {{ l.level }}">
+        <span class="t">{{ l.ts | time_fmt }}</span>
+        <span class="l">{{ l.level }}</span>
+        <span class="m">{{ l.msg }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">无日志</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">响应摘要（已脱敏）</h2>
+    </div>
+    <pre class="mono small" style="margin:0;white-space:pre-wrap;word-break:break-all;max-height:420px;overflow:auto;">{{ detail }}</pre>
+  </div>
+</div>
+{% endblock %}

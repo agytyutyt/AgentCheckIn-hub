@@ -1,0 +1,13 @@
+* text=auto
+
+# 服务器上要能直接执行，必须是 LF（CRLF 会让 shebang 变成 "bash\r" 报错）
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+
+# Windows 批处理/脚本保持 CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.tar.gz binary

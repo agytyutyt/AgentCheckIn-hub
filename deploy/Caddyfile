@@ -1,0 +1,13 @@
+# 有域名时自动申请 Let's Encrypt 证书；留空时 SITE_ADDR=:80，走纯 HTTP
+{$SITE_ADDR::80} {
+	encode gzip
+
+	reverse_proxy app:8000
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

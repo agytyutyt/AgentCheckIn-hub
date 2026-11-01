@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}任务与调度 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">任务与调度</h1>
+    <div class="page-sub">cron 修改后立即热生效，无需重启服务</div>
+  </div>
+</div>
+
+<div class="cards">
+  {% for t in tasks %}
+  <div class="card acct-card">
+    <div class="acct-head">
+      <div class="avatar {{ 'qd' if t.platform != 'workbuddy' else '' }}">{{ t.name[:1] }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="acct-name">{{ t.name }}</div>
+        <div class="acct-meta">{{ t.platform }} · {{ t.task_key }}</div>
+      </div>
+      {% if t.enabled %}<span class="chip chip-ok">启用</span>{% else %}<span class="chip chip-none">停用</span>{% endif %}
+    </div>
+
+    <div class="cron-row">
+      <input class="input mono" id="cron-{{ t.id }}" value="{{ t.cron }}">
+      <button class="btn btn-sm nowrap" onclick="saveCron({{ t.id }})">保存</button>
+    </div>
+
+    <div class="kv">
+      <div><span>执行窗口</span><b>{{ t.window_start }} – {{ t.window_end }}</b></div>
+      <div><span>下次运行</span><b>{{ t.next_run }}</b></div>
+      <div><span>在管账号</span><b>{{ t.accounts }} 个</b></div>
+      <div><span>最大重试</span><b>{{ t.max_attempts }} 次</b></div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn btn-sm" onclick="runTask({{ t.id }})">立即执行</button>
+      <button class="btn btn-sm" onclick="toggleTask({{ t.id }})">{{ '停用' if t.enabled else '启用' }}</button>
+      <a class="btn btn-sm" href="/runs" style="margin-left:auto;">记录</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">调度说明</h2></div>
+    <table>
+      <tbody class="small">
+        <tr><td class="muted nowrap">签到</td><td>每天 08:30 一次。若失败，10 / 30 / 120 分钟后退避重试，直到当日窗口结束。</td></tr>
+        <tr><td class="muted nowrap">宠物旅行</td><td>每 30 分钟探测一次状态：<span class="mono">traveling</span> 不动，<span class="mono">arrived</span> 领积分，<span class="mono">idle</span> 且未达上限则派出。</td></tr>
+        <tr><td class="muted nowrap">Qoder</td><td>活动约 10:00 开窗，10–11 点每 10 分钟一轮；活动未下发返回 <span class="mono">pending</span>，下轮自动再试。</td></tr>
+        <tr><td class="muted nowrap">窗口</td><td>超出执行窗口的任务不再触发，也不会排入补偿队列。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">cron 写法</h2></div>
+    <table>
+      <tbody class="small">
+        <tr><td class="mono nowrap">30 8 * * *</td><td>每天 08:30</td></tr>
+        <tr><td class="mono nowrap">*/30 * * * *</td><td>每 30 分钟</td></tr>
+        <tr><td class="mono nowrap">5,15,25 10-11 * * *</td><td>10 点到 11 点之间每 10 分钟（第 5/15/25 分）</td></tr>
+        <tr><td class="mono nowrap">0 9 * * 1-5</td><td>工作日 09:00</td></tr>
+      </tbody>
+    </table>
+    <div class="small faint" style="margin-top:10px;">共 5 段：分 时 日 月 周，按 {{ tz }} 解释。</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}账号 · {{ app_name }}{% endblock %}
+
+{% macro acc_status(s) -%}
+{%- if s == 'ok' -%}<span class="chip chip-ok">正常</span>
+{%- elif s == 'need_login' -%}<span class="chip chip-fail">需重新登录</span>
+{%- elif s == 'error' -%}<span class="chip chip-warn">异常</span>
+{%- else -%}<span class="chip chip-none">未校验</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">账号</h1>
+    <div class="page-sub">凭证以 AES-256-GCM 加密存储，页面仅显示首尾片段</div>
+  </div>
+  <div class="row">
+    <button class="btn" onclick="refreshAllCredits(this)">刷新余额</button>
+    <button class="btn" onclick="openModal('add-modal')">粘贴凭证</button>
+    <button class="btn" onclick="openQlogin()">Qoder 登录</button>
+    <button class="btn btn-primary" onclick="startScan()">WorkBuddy 登录</button>
+  </div>
+</div>
+
+{% if accounts %}
+<div class="cards">
+  {% for a in accounts %}
+  <div class="card acct-card">
+    <div class="acct-head">
+      <div class="avatar {{ 'qd' if a.platform != 'workbuddy' else '' }}{{ ' off' if not a.enabled }}">{{ a.name[:1] }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="acct-name">
+          {{ a.name }}
+          {% if a.realm_name %}<span class="chip chip-info" style="font-size:10px;">{{ a.realm_name }}</span>{% endif %}
+          {% if not a.enabled %}<span class="chip chip-none">已停用</span>{% endif %}
+        </div>
+        <div class="acct-meta">{{ a.uid or '—' }}</div>
+      </div>
+      {{ acc_status(a.status) }}
+    </div>
+
+    <div class="acct-stats" data-account="{{ a.id }}">
+      <div title="{{ a.credit_kind }}{% if a.credit_age_text %} · {{ a.credit_age_text }}更新{% endif %}">
+        <span>{{ a.credit_kind }}</span>
+        <b class="js-balance {{ 'zero' if not a.credit_balance }}">{{ a.credit_balance }}</b>
+        <em class="js-age{% if a.credit_age_text %} live{% endif %}">{{ a.credit_age_text or '本地统计' }}</em>
+      </div>
+      <div>
+        <span>今日净增</span>
+        <b class="js-today {{ 'ok' if a.credit_today else 'zero' }}" title="{{ a.credit_today_source }} · 任务累计 +{{ a.credit_task_today }}">+{{ a.credit_today }}</b>
+        <em>&nbsp;</em>
+      </div>
+    </div>
+
+    {% if a.credit_expiry_text %}
+    <div class="expiry-hint">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg>
+      <span>{{ a.credit_expiry_text }}</span>
+    </div>
+    {% endif %}
+
+    <div class="kv">
+      <div>
+        <span>平台</span>
+        <b>{{ 'WorkBuddy' if a.platform == 'workbuddy' else 'Qoder' }}</b>
+      </div>
+      <div>
+        <span>有效期</span>
+        <b class="{{ 'danger' if a.expire_warn }}">{{ a.expire_text }}</b>
+      </div>
+      <div>
+        <span>令牌</span>
+        <b class="mono">{{ a.token_hint or '—' }}{% if a.has_refresh %} <span class="chip chip-info" style="font-size:10px;">RT</span>{% endif %}</b>
+      </div>
+      {% if a.platform == 'workbuddy' %}
+      <div>
+        <span>宠物旅行</span>
+        <b>{{ a.location or '默认地点' }} · {{ '自动派出' if a.auto_depart else '仅领取' }}</b>
+      </div>
+      {% else %}
+      <div>
+        <span>令牌刷新</span>
+        <b>{{ '支持自动续期' if a.has_refresh else '仅手动更新' }}</b>
+      </div>
+      {% endif %}
+      {% if a.last_error %}
+      <div class="wide">
+        <span>最近错误</span>
+        <b class="danger" title="{{ a.last_error }}">{{ a.last_error }}</b>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card-actions">
+      <button class="btn btn-sm" onclick="testAccount({{ a.id }})">测试</button>
+      {% if a.has_refresh %}
+      <button class="btn btn-sm" onclick="renewAccount({{ a.id }}, this)">续期</button>
+      {% endif %}
+      <button class="btn btn-sm" onclick="openModal('edit-{{ a.id }}')">配置</button>
+      <button class="btn btn-sm" onclick="toggleAccount({{ a.id }})">{{ '停用' if a.enabled else '启用' }}</button>
+      <button class="btn btn-sm btn-danger" style="margin-left:auto;" onclick="deleteAccount({{ a.id }}, '{{ a.name }}')">删除</button>
+    </div>  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty">
+    还没有账号。最简单的方式：双击项目根目录的 <span class="mono">import-account.bat</span>，
+    自动读取本机登录态并写入；也可以点右上角「添加账号」手动粘贴凭证。
+  </div>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">凭证从哪来</h2>
+      <div class="card-sub">面板只做接口调用，不需要客户端常驻</div>
+    </div>
+  </div>
+  <div class="kv" style="gap:14px 28px;">
+    <div class="wide" style="gap:4px;">
+      <span>WorkBuddy</span>
+      <b style="white-space:normal;line-height:1.7;">双击项目根目录的 <span class="mono">import-account.bat</span> 自动读取并解密；需要 accessToken、uid、过期时间（可选 refreshToken）</b>
+    </div>
+    <div class="wide" style="gap:4px;">
+      <span>Qoder</span>
+      <b style="white-space:normal;line-height:1.7;">同上，一键导入会同时处理；需要 accessToken、refreshToken（含 Cosy-* 设备标识）</b>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="add-modal">
+  <div class="modal">
+    <h3>添加账号</h3>
+    <div class="hint">粘贴导入器导出的 JSON；WorkBuddy 也支持直接粘贴纯 accessToken。</div>
+    <label class="field">
+      <span>平台</span>
+      <select id="ac-platform" onchange="syncRealmRow()">
+        <option value="workbuddy">WorkBuddy</option>
+        <option value="qoder">Qoder</option>
+      </select>
+    </label>
+    <label class="field" id="ac-realm-row" style="display:none;">
+      <span>区域（独立账号池，决定请求哪个基址）</span>
+      <select id="ac-realm">
+        <option value="cn">Qoder CN · 国内版（openapi.qoder.com.cn）</option>
+        <option value="intl">Qoder · 国际版（openapi.qoder.sh）</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>账号备注</span>
+      <input class="input" id="ac-name" placeholder="例如 主账号">
+    </label>
+    <label class="field">
+      <span>凭证 JSON</span>
+      <textarea id="ac-cred" placeholder='{"accessToken":"eyJ...","uid":"...","refreshToken":"..."}'></textarea>
+    </label>
+    <label class="field">
+      <span>探险地点（WorkBuddy 可选，留空取默认第一个）</span>
+      <input class="input" id="ac-loc" placeholder="数字 id 或 code，例如 coffee">
+    </label>
+    <label class="row" style="margin-bottom:16px;">
+      <input type="checkbox" id="ac-auto" checked>
+      <span class="small muted">宠物空闲时自动派出探险</span>
+    </label>
+    <div class="row" style="justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('add-modal')">取消</button>
+      <button class="btn btn-primary" id="ac-submit" onclick="createAccount()">添加并校验</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="scan-modal">
+  <div class="modal" style="max-width:420px;">
+    <h3>WorkBuddy 登录</h3>
+    <div class="hint">用手机扫码，在官方页面确认登录即可 —— 不用再导出、粘贴凭证。</div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;justify-content:center;">
+      <div id="scan-box" style="width:220px;height:220px;display:flex;align-items:center;justify-content:center;"></div>
+    </div>
+    <div id="scan-status" class="small muted" style="text-align:center;min-height:22px;margin-top:10px;">正在获取二维码…</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px;">
+      <button class="btn" onclick="closeScan()">关闭</button>
+      <button class="btn" onclick="startScan(true)">刷新二维码</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="qlogin-modal">
+  <div class="modal" style="max-width:460px;">
+    <h3>Qoder 账号登录</h3>
+    <div class="hint">选好区域后打开官方授权页，用<b>手机号 + 短信验证码</b>登录并确认授权即可 —— 不用导出、粘贴凭证。</div>
+    <label class="field">
+      <span>区域</span>
+      <select id="ql-realm">
+        <option value="cn">Qoder CN · 国内版（openapi.qoder.com.cn）</option>
+        <option value="intl">Qoder · 国际版（openapi.qoder.sh）</option>
+      </select>
+    </label>
+    <div id="ql-step-link" style="display:none;">
+      <div style="background:#fff;border-radius:12px;padding:10px;display:flex;justify-content:center;">
+        <div id="ql-qr" style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;"></div>
+      </div>
+      <div class="small muted" style="text-align:center;margin-top:8px;">
+        手机扫码，或 <a id="ql-url" href="#" target="_blank" rel="noopener">在电脑浏览器打开授权页</a>
+      </div>
+    </div>
+    <div id="ql-status" class="small muted" style="text-align:center;min-height:22px;margin-top:10px;"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px;">
+      <button class="btn" onclick="closeQlogin()">关闭</button>
+      <button class="btn btn-primary" id="ql-go" onclick="startQlogin()">获取登录链接</button>
+    </div>
+  </div>
+</div>
+
+{% for a in accounts %}
+<div class="overlay" id="edit-{{ a.id }}">
+  <div class="modal">
+    <h3>配置「{{ a.name }}」</h3>
+    <div class="hint">修改备注或替换令牌（令牌更新后会自动重新校验）</div>
+    <label class="field">
+      <span>备注</span>
+      <input class="input" id="an-{{ a.id }}" value="{{ a.name }}">
+    </label>
+    {% if a.platform == 'workbuddy' %}
+    <label class="field">
+      <span>探险地点</span>
+      <input class="input" id="loc-{{ a.id }}" value="{{ a.location }}" placeholder="留空取默认">
+    </label>
+    <label class="row" style="margin-bottom:14px;">
+      <input type="checkbox" id="auto-{{ a.id }}" {{ 'checked' if a.auto_depart }}>
+      <span class="small muted">空闲时自动派出</span>
+    </label>
+    {% endif %}
+    <label class="field">
+      <span>替换凭证（留空则不修改）</span>
+      <textarea id="cred-{{ a.id }}" placeholder="粘贴新的凭证 JSON"></textarea>
+    </label>
+    <div class="row" style="justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('edit-{{ a.id }}')">关闭</button>
+      <button class="btn btn-primary" onclick="saveAccountConfig({{ a.id }})">保存</button>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

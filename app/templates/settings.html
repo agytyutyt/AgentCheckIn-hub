@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}设置 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">设置</h1>
+    <div class="page-sub">通知渠道、登录口令与系统信息</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">通知渠道</h2>
+      <div class="card-sub">企业微信群机器人免费，5 分钟即可配好</div>
+    </div>
+    <span class="chip {{ 'chip-ok' if wecom_ready else 'chip-none' }}">{{ '已配置' if wecom_ready else '未配置' }}</span>
+  </div>
+
+  <label class="field">
+    <span>企业微信群机器人 Webhook</span>
+    <input class="input mono" id="wecom" value="{{ cfg.wecom_webhook }}"
+           placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx">
+  </label>
+  <div class="small faint" style="margin:-6px 0 14px;">
+    企业微信群 → 右上角「…」→ 群机器人 → 添加机器人 → 复制 Webhook 地址。个人可建只有自己的群，完全免费。
+  </div>
+
+  <label class="field">
+    <span>通用 Webhook（可选，POST JSON {title, content, level}）</span>
+    <input class="input mono" id="generic" value="{{ cfg.generic_webhook }}" placeholder="https://example.com/hook">
+  </label>
+
+  <div class="row" style="margin:8px 0 16px;gap:22px;">
+    <label class="row" style="gap:8px;">
+      <input type="checkbox" id="n-enabled" {{ 'checked' if cfg.notify_enabled == '1' }}>
+      <span class="small">启用通知</span>
+    </label>
+    <label class="row" style="gap:8px;">
+      <input type="checkbox" id="n-success" {{ 'checked' if cfg.notify_on_success == '1' }}>
+      <span class="small">成功也推送（默认只在失败/需登录时推送）</span>
+    </label>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-primary" onclick="saveNotify()">保存</button>
+    <button class="btn" onclick="testNotify()">发送测试消息</button>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">登录口令</h2></div>
+    <label class="field">
+      <span>当前口令</span>
+      <input class="input" type="password" id="pw-old" autocomplete="current-password">
+    </label>
+    <label class="field">
+      <span>新口令（至少 8 位）</span>
+      <input class="input" type="password" id="pw-new" autocomplete="new-password">
+    </label>
+    <button class="btn btn-primary" onclick="changePassword()">更新口令</button>
+    <div class="small faint" style="margin-top:12px;">
+      <span class="mono">.env</span> 里的 <span class="mono">ADMIN_PASSWORD</span> 优先级最高：填了就每次启动强制重置为该值。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">系统信息</h2></div>
+    <div class="kv">
+      <div><span>版本</span><b class="mono">{{ version }}</b></div>
+      <div><span>时区</span><b class="mono">{{ tz }}</b></div>
+      <div class="wide"><span>监听</span><b class="mono">{{ host }}:{{ port }}</b></div>
+      <div class="wide"><span>数据库</span><b class="mono" style="white-space:normal;word-break:break-all;">{{ db_path }}</b></div>
+    </div>
+    <div class="row" style="margin-top:16px;">
+      <a class="btn" href="/backup">下载数据库备份</a>
+      <a class="btn" href="/healthz" target="_blank">健康检查</a>
+    </div>
+    <div class="small faint" style="margin-top:12px;">
+      备份文件含加密后的凭证；<span class="mono">MASTER_KEY</span> 不在其中，换机恢复时需一并带上 <span class="mono">data/master.key</span>。
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}运行记录 · {{ app_name }}{% endblock %}
+
+{% macro st(s) -%}
+{%- if s == 'success' -%}<span class="chip chip-ok">成功</span>
+{%- elif s == 'skipped' -%}<span class="chip">跳过</span>
+{%- elif s == 'pending' -%}<span class="chip chip-warn">待下发</span>
+{%- elif s == 'retryable' -%}<span class="chip chip-warn">待重试</span>
+{%- elif s == 'failed' -%}<span class="chip chip-fail">失败</span>
+{%- elif s == 'need_login' -%}<span class="chip chip-fail">需登录</span>
+{%- elif s == 'running' -%}<span class="chip chip-info">执行中</span>
+{%- else -%}<span class="chip chip-none">{{ s }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">运行记录</h1>
+    <div class="page-sub">共 {{ total }} 条</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <form method="get" action="/runs" class="row">
+    <select name="status" style="width:150px;">
+      <option value="">全部状态</option>
+      {% for k, v in [('success','成功'),('skipped','跳过'),('pending','待下发'),('retryable','待重试'),('failed','失败'),('need_login','需登录')] %}
+      <option value="{{ k }}" {{ 'selected' if status == k }}>{{ v }}</option>
+      {% endfor %}
+    </select>
+    <input class="input" name="account" value="{{ account }}" placeholder="账号名筛选" style="width:180px;">
+    <button class="btn" type="submit">筛选</button>
+    {% if status or account %}<a class="btn" href="/runs">重置</a>{% endif %}
+  </form>
+</div>
+
+{% if runs %}
+<div class="run-list">
+  {% for r in runs %}
+  {% set cr = r.delta_credit or r.credit_snapshot or 0 %}
+  <div class="run-card {{ r.status }}">
+    <div class="stripe"></div>
+    <div class="run-main">
+      <div class="run-title">
+        <span class="run-task">{{ r.task_name }}</span>
+        <span class="tag">{{ r.account_name }}</span>
+        {{ st(r.status) }}
+        {% if r.attempt > 1 %}<span class="small faint">第 {{ r.attempt }} 次</span>{% endif %}
+      </div>
+      <div class="run-msg">{{ r.message }}</div>
+    </div>
+    <div class="run-side">
+      <div class="run-credit{{ ' none' if not cr }}" title="本次 +{{ r.delta_credit }} · 今日累计 {{ r.credit_snapshot or 0 }}">{{ ('+' ~ cr) if cr else '—' }}</div>
+      <div class="run-time">{{ r.started_at | datetime_fmt }}</div>
+      <div class="small faint">{{ r.duration_ms }}ms · <a href="/runs/{{ r.id }}">详情</a></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="pager">
+  <span>第 {{ page }} / {{ pages }} 页</span>
+  {% if page > 1 %}<a class="btn btn-sm" href="/runs?page={{ page - 1 }}&status={{ status }}&account={{ account }}">上一页</a>{% endif %}
+  {% if page < pages %}<a class="btn btn-sm" href="/runs?page={{ page + 1 }}&status={{ status }}&account={{ account }}">下一页</a>{% endif %}
+</div>
+{% else %}
+<div class="card"><div class="empty">暂无记录</div></div>
+{% endif %}
+{% endblock %}
