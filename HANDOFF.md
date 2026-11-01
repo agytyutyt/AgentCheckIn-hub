@@ -12,7 +12,7 @@
 | 项 | 状态 |
 |---|---|
 | 代码 | 本地 `D:\TestWorkSpace\checkin-hub`，本次首次入 git 并推到 GitHub |
-| 线上 | 腾讯云服务器（`<SERVER_IP>`，见下「机密清单」）Docker Compose 跑 `app` + `caddy` |
+| 线上 | 腾讯云服务器（IP 见本机 `tools/sync_qoder_identity.local.bat` 或云控制台，**不写进仓库**）Docker Compose 跑 `app` + `caddy` |
 | 线上数据 | **唯一权威副本**在服务器 `~/checkin-hub/data/`：`checkin.db` + `master.key` + `qoder-umid/` |
 | 本地数据 | `data/` 是 **2026-10-30 的旧副本**（0 条运行记录、旧 schema），只够做本机演示，别拿它当账本 |
 | 最后改动 | 2026-11-01 13:29–13:38：Qoder 国际版身份/领取自愈（`app/qoderumid.py`、`app/providers/qoder.py`）、Mock 覆盖（`tools/mock_api.py`）、回归（`tests/e2e.py`）、README、重新打包 |
@@ -226,32 +226,44 @@ sudo docker compose exec -T app python -m app.cli probe     # 校验全部账号
 
 ---
 
-## 7. 仓库与首次推送
+## 7. 仓库与推送
 
-本次会话之前**这个目录根本没有 git 仓库**（也就没有历史泄漏口令的问题）。首次推送：
+远端：**https://github.com/agytyutyt/AgentCheckIn-hub**（分支 `main`）。
+本次会话之前这个目录**没有 git 仓库**（也就没有历史泄漏口令的问题），首次提交已完成并推送：
 
 ```powershell
-git init -b main
+# 已经做过，新机器只需 clone：
+git clone https://github.com/agytyutyt/AgentCheckIn-hub.git checkin-hub
+```
+
+再推的流程（`origin` 已配好，直接提交推送即可）：
+
+```powershell
 git add -A
 git status                      # 确认没有 data/ .env *.local.bat 等
-git commit -m "chore: initial commit — CheckinHub 现状（2026-11-01）"
-git remote add origin https://github.com/<you>/checkin-hub.git
-git push -u origin main
+git commit -m "feat: ..."
+git push
 ```
 
 推送前自检（应无输出，或只匹配到示例/占位符）：
 
 ```powershell
-git grep -n -E "43\.136\.|baxOws9|PANEL_PASS=.+" -- . ':!*.local.bat'
+git grep -n -E "43\.136\.|baxOws9|PANEL_PASS=.+|eyJ[A-Za-z0-9_-]{20,}" -- . ':!*.local.bat'
 ```
 
+> **认证**：本机靠 Git Credential Manager（`credential.helper=manager`）用系统里已存的
+> GitHub 凭据推送，没有令牌写进仓库或命令行。新机器首次 push 会弹一次浏览器授权；
+> 也可以 `gh auth login` 或直接用带 PAT 的 URL。DSH 沙箱里 `git push` 会因命名管道受限
+> 而读不到凭据，需要放开沙箱或在你自己的终端里推。
+>
 > 提交身份：本机 `git config --global` 已有 `user.name` / `user.email`。
 > 若不想把真实邮箱写进公开提交历史，先设成 GitHub 的 noreply 地址：
 > `git config --global user.email "<id>+<user>@users.noreply.github.com"`
 >
 > **仓库只放代码**：真实账号昵称/UID/手机号/令牌只存在于服务器的 `checkin.db`，
 > 截图目录 `docs/screenshots/` 已从仓库移除（本地保留但被 gitignore）。
-> 仓库建议设为 **private**：README 里虽然没有口令，但描述了风控绕过与设备身份细节。
+> ⚠️ 该仓库目前是 **public**；若不想公开，去 Settings → 最下方 Change visibility 改成 private
+> ——README 里没有口令，但描述了风控绕过与设备身份伪装细节，公开可能违反平台条款。
 
 ---
 
